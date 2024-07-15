@@ -15,6 +15,8 @@ from dynamax.linear_gaussian_ssm.inference import (
     PosteriorGSSMFiltered,
     PosteriorGSSMSmoothed,
 )
+from jax_tqdm import scan_tqdm
+
 
 # Helper functions
 _get_params = lambda x, dim, t: x[t] if x.ndim == dim + 1 else x
@@ -266,6 +268,7 @@ def conditional_moments_gaussian_filter(
     # Emission distribution
     emission_dist = model_params.emission_dist
 
+    @scan_tqdm(num_timesteps, print_rate=100)
     def _step(carry, t):
         ll, pred_mean, pred_cov = carry
 
