@@ -148,7 +148,7 @@ def _predict(m, P, f, Q, u, g_ev, g_cov):
 
 
 def _condition_on(
-    m, P, y_cond_mean, y_cond_cov, u, y, g_ev, g_cov, num_iter, emission_dist
+    m, P, y_cond_mean, y_cond_cov, u, y, g_ev, g_cov, num_iter, emission_dist, weights
 ):
     """Condition a Gaussian potential on a new observation with arbitrary
        likelihood with given functions for conditional moments and make a
@@ -194,7 +194,7 @@ def _condition_on(
         log_likelihood = emission_dist(yhat, S).log_prob(jnp.atleast_1d(y)).sum()
         C = g_cov(identity_fn, m_Y, prior_mean, prior_cov)
         K = psd_solve(S, C.T).T
-        posterior_mean = prior_mean + K @ (y - yhat)
+        posterior_mean = prior_mean + K @ ((y - yhat) * weights)
         posterior_cov = prior_cov - K @ S @ K.T
         return (posterior_mean, posterior_cov), log_likelihood
 
@@ -275,11 +275,22 @@ def conditional_moments_gaussian_filter(
         # Get parameters and inputs for time index t
         Q = _get_params(model_params.dynamics_covariance, 2, t)
         u = inputs[t]
+        weights = u[:, -1]
         y = emissions[t]
 
         # Condition on the emission
         log_likelihood, filtered_mean, filtered_cov = _condition_on(
-            pred_mean, pred_cov, m_Y, Cov_Y, u, y, g_ev, g_cov, num_iter, emission_dist
+            pred_mean,
+            pred_cov,
+            m_Y,
+            Cov_Y,
+            u,
+            y,
+            g_ev,
+            g_cov,
+            num_iter,
+            emission_dist,
+            weights,
         )
         ll += log_likelihood
 
